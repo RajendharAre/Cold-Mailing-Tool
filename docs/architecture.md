@@ -8,34 +8,50 @@ This document describes the system architecture for **The Closer**, derived from
 
 | Goal | How the architecture supports it |
 |------|----------------------------------|
-| Explainable in a live demo | Few modules, linear pipeline, no hidden side effects |
+| Explainable in a live demo | Few modules, linear workflow, visible preview and approval step |
 | Safe by default | Draft/dry-run first, human confirmation gate, volume caps |
-| Modular | Generation, preview, send, and log are separate concerns |
-| Extensible | Optional LLM, UI, and providers plug in behind interfaces |
-| Auditable | Every attempt logged with status and errors |
+| Modular | Input, AI generation, preview, delivery, logging, and tracking are separate concerns |
+| Extensible | Streamlit UI, Gemini integration, SMTP delivery, and Google Sheets tracking can be added incrementally |
+| Auditable | Every attempt is logged with status, metadata, and tracking information |
+| Practical for real-world usage | The user can provide a job description, resume context, and job link to generate a polished outreach draft quickly |
 
-**Non-goals for MVP:** bulk sending, unattended automation, multi-tenant SaaS, or a production-grade email platform.
+**Non-goals for MVP:** unattended bulk sending, multi-tenant SaaS, or a fully autonomous recruiting engine.
+
+### 1.1 Updated Product Vision
+
+The product is evolving from a simple demo workflow into a more realistic outreach assistant:
+
+- the user provides a job description, optional job ID/link, and resume content,
+- the app uses an LLM (for example Gemini) to generate a short, professional, personalized email,
+- the user reviews the draft,
+- and then chooses to send, draft, or skip.
+
+We will also track every outreach attempt in Google Sheets so the user has a searchable record of outreach history and status.
 
 ---
 
 ## 2. System Context
 
-The system sits between a **job seeker** (operator) and **Gmail or an SMTP provider**. It does not scrape job boards or discover contacts in MVP scope—it consumes pre-prepared outreach targets.
+The system sits between a **job seeker** and the tools that help them turn a job opportunity into a thoughtful outreach email. In the upgraded version, the user provides a job description, optional link or job ID, and resume context; the app generates the email draft, previews it, and then optionally sends or drafts it.
 
 ```mermaid
 C4Context
     title System Context — The Closer
 
-    Person(seeker, "Job Seeker", "Reviews and approves each email")
+    Person(seeker, "Job Seeker", "Provides job details, resume context, and approves each draft")
     System(closer, "The Closer", "Generates, previews, drafts/sends outreach")
+    System_Ext(ui, "Streamlit UI", "Collects inputs and shows the preview")
+    System_Ext(llm, "Gemini / LLM API", "Creates subject + personalized email body")
     System_Ext(gmail, "Gmail / SMTP", "Delivers or stores drafts")
-    System_Ext(input, "Local Files", "contacts.json, jobs.csv")
-    System_Ext(log, "outreach_log.csv", "Audit trail")
+    System_Ext(sheets, "Google Sheets", "Stores outreach history and status")
+    System_Ext(input, "Local Files", "contacts.json, resumes, logs")
 
-  seeker --> closer : runs CLI, confirms send/skip
-  closer --> input : loads targets
+  seeker --> ui : enters job info and resume context
+  ui --> closer : passes request
+  closer --> llm : requests personalized draft
   closer --> gmail : draft or send
-  closer --> log : append entries
+  closer --> sheets : log outreach record
+  closer --> input : read/write local data
   seeker --> gmail : verifies Sent/Drafts folder
 ```
 
@@ -43,37 +59,58 @@ C4Context
 
 ## 3. High-Level Architecture
 
-The application is a **single-process CLI pipeline** with four core capabilities orchestrated by a thin entry point.
+The application is evolving into a **Streamlit-first workflow** where the user provides job context and resume information, the app generates a personalized draft with an LLM, and the user approves the final action.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              main.py (Orchestrator)                      │
-│  load config → load targets → for each target: pipeline → exit summary │
+│                         Streamlit UI / Web Entry                        │
+│  job description + job link + resume + recipient details → preview     │
 └─────────────────────────────────────────────────────────────────────────┘
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Input Loader │ │Email Generator│ │   Preview    │ │ Email Sender │
-│ (contacts)   │ │  (template)   │ │  + Confirm   │ │ SMTP / API   │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
-         │              │              │              │
-         └──────────────┴──────────────┴──────────────┘
-                                    │
-                                    ▼
-                          ┌──────────────┐
-                          │    Logger    │
-                          │ outreach_log │
-                          └──────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     Request Builder + Input Validation                  │
+│  normalize job info, recipient data, resume text, and user preferences│
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     Gemini / LLM Email Generator                       │
+│  creates subject + short professional body + personalization hook     │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Preview + Human Approval Flow                       │
+│  user reviews draft, then chooses send / draft / skip                 │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+         ┌────────────────────────┼────────────────────────┐
+         ▼                        ▼                        ▼
+┌──────────────┐        ┌──────────────┐        ┌──────────────┐
+│ Email Sender │        │   Logger     │        │ Sheets Sync  │
+│ SMTP / Gmail │        │ CSV / audit  │        │ outreach log │
+└──────────────┘        └──────────────┘        └──────────────┘
 ```
 
 ### 3.1 Layered View
 
 | Layer | Responsibility | MVP modules |
 |-------|----------------|-------------|
-| **Presentation** | Terminal I/O, preview formatting, yes/no/skip prompts | `main.py` (inline) or `cli.py` (stretch) |
-| **Application** | Per-target workflow, guardrails, batch limits | `main.py` |
-| **Domain** | Contact model, email model, cold-email rules | `models.py` (optional), `email_generator.py` |
-| **Infrastructure** | File I/O, SMTP/Gmail, env config | `email_sender.py`, `logger.py`, `config.py` |
+| **Presentation** | Streamlit UI, preview formatting, approve/send/draft/skip actions | `src/closer/ui/app.py` |
+| **Application** | Workflow orchestration, guardrails, request validation, delivery decisions | `src/closer/outreach/workflow.py` |
+| **Domain** | Job request, contact model, email draft, outreach record | `src/closer/domain/models.py` |
+| **Infrastructure** | File I/O, SMTP/Gmail, Gemini API, Google Sheets sync, env config | `src/closer/config/settings.py`, `src/closer/delivery/`, `src/closer/ai/`, `src/closer/tracking/` |
+
+### 3.2 Proposed Supporting Modules
+
+| Module | Purpose |
+|--------|---------|
+| `input/resume_loader.py` | Read resume text from uploaded file or pasted content |
+| `ai/gemini_client.py` | Send job description + resume context to Gemini and receive subject/body |
+| `preview/preview.py` | Display the generated draft for human review |
+| `tracking/sheets_client.py` | Append outreach rows to Google Sheets with status updates |
+| `delivery/sender.py` | Send or draft the email via SMTP |
 
 ---
 
