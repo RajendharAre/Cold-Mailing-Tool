@@ -1,0 +1,6 @@
+timestamp,recipient_email,company,role,subject,status,error_message,word_count,job_url
+2026-05-28T11:15:32.942722+00:00,priya@example.com,Acme AI,Backend Engineering Intern,Quick note on the Backend Engineering Intern role,dry_run,,82,https://example.com/job/backend-intern
+2026-05-28T11:15:32.943224+00:00,jordan@example.com,Nimbus Health,Software Engineer Intern,Interest in Software Engineer Intern at Nimbus Health,dry_run,,86,
+2026-05-28T11:15:32.943469+00:00,ravi.patel@example.com,Orbit Labs,Applied AI Intern,Interest in Applied AI Intern at Orbit Labs,dry_run,,90,
+2026-05-28T11:15:32.943614+00:00,morgan.lee@example.com,TechFlow Systems,Platform Engineering Intern,Quick note on the Platform Engineering Intern role,dry_run,,88,
+2026-05-28T11:15:32.943766+00:00,samira@example.com,GreenGrid Energy,Data Engineering Intern,Interest in Data Engineering Intern at GreenGrid Energy,dry_run,,90,https://example.com/job/data-intern

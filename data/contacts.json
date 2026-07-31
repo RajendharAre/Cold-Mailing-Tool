@@ -1,0 +1,49 @@
+[
+  {
+    "recipient_name": "Priya Sharma",
+    "recipient_email": "priya@example.com",
+    "company": "Acme AI",
+    "role": "Backend Engineering Intern",
+    "job_url": "https://example.com/job/backend-intern",
+    "personalization_note": "I noticed your recent launch in workflow automation.",
+    "candidate_name": "Alex Kim",
+    "candidate_background": "Python developer focused on automation and AI agents",
+    "portfolio_url": "https://github.com/alexkim"
+  },
+  {
+    "recipient_email": "jordan@example.com",
+    "company": "Nimbus Health",
+    "role": "Software Engineer Intern",
+    "candidate_name": "Alex Kim",
+    "candidate_background": "Python developer with experience building data workflows",
+    "linkedin_url": "https://www.linkedin.com/in/alexkim"
+  },
+  {
+    "recipient_name": "Ravi Patel",
+    "recipient_email": "ravi.patel@example.com",
+    "company": "Orbit Labs",
+    "role": "Applied AI Intern",
+    "candidate_name": "Alex Kim",
+    "candidate_background": "Python developer interested in LLM orchestration and practical AI products",
+    "resume_link": "https://example.com/alex-kim-resume.pdf"
+  },
+  {
+    "recipient_name": "Morgan Lee",
+    "recipient_email": "morgan.lee@example.com",
+    "company": "TechFlow Systems",
+    "role": "Platform Engineering Intern",
+    "personalization_note": "Your post on reliable developer tooling for small teams stood out to me.",
+    "candidate_name": "Alex Kim",
+    "candidate_background": "Python developer who enjoys building internal tools and automation",
+    "portfolio_url": "https://github.com/alexkim"
+  },
+  {
+    "recipient_name": "Samira Khan",
+    "recipient_email": "samira@example.com",
+    "company": "GreenGrid Energy",
+    "role": "Data Engineering Intern",
+    "job_url": "https://example.com/job/data-intern",
+    "candidate_name": "Alex Kim",
+    "candidate_background": "Python developer with interest in data pipelines and sustainability tech"
+  }
+]
