@@ -6,3 +6,6 @@ venv/
 logs/*.csv
 !logs/.gitkeep
 !logs/outreach_log.sample.csv
+
+# Keep your resume background tracked intentionally
+!resume_background.md

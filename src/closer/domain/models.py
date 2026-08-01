@@ -31,6 +31,8 @@ class Contact:
     personalization_note: str | None = None
     linkedin_url: str | None = None
     resume_link: str | None = None
+    job_description: str | None = None
+    resume_context: str | None = None
 
 
 @dataclass

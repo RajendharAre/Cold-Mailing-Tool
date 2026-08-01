@@ -10,6 +10,7 @@ from closer.audit import append_log
 from closer.config import AppConfig
 from closer.delivery import deliver_email
 from closer.domain import Contact, DeliveryResult, EmailDraft, LogEntry
+from closer.tracking import append_outreach_row
 
 Action = Literal["send", "draft", "skip"]
 
@@ -55,6 +56,11 @@ def record_log(
     )
 
 
+def _sync_tracking(contact: Contact, draft: EmailDraft, status: str, config: AppConfig) -> None:
+    result = append_outreach_row(contact, draft, status, config)
+    print(f"[tracking] {result['message']}")
+
+
 def handle_contact_action(
     contact: Contact,
     draft: EmailDraft,
@@ -68,6 +74,7 @@ def handle_contact_action(
     """
     if action == "skip":
         record_log(config, contact, draft, status="skipped")
+        _sync_tracking(contact, draft, "skipped", config)
         return ActionOutcome(
             log_status="skipped",
             message="Skipped — no delivery attempted.",
@@ -83,6 +90,7 @@ def handle_contact_action(
             status="failed",
             error_message=result.error or "Unknown delivery error",
         )
+        _sync_tracking(contact, draft, "failed", config)
         return ActionOutcome(
             log_status="failed",
             message=result.error or "Delivery failed.",
@@ -91,6 +99,7 @@ def handle_contact_action(
 
     if config.dry_run:
         record_log(config, contact, draft, status="dry_run")
+        _sync_tracking(contact, draft, "dry_run", config)
         return ActionOutcome(
             log_status="dry_run",
             message=f"Dry-run complete (simulated {result.status}).",
@@ -98,6 +107,7 @@ def handle_contact_action(
         )
 
     record_log(config, contact, draft, status=result.status)
+    _sync_tracking(contact, draft, result.status, config)
     return ActionOutcome(
         log_status=result.status,
         message=f"Delivery status: {result.status}.",

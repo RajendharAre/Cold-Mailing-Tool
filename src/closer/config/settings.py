@@ -30,6 +30,10 @@ class AppConfig:
     groq_api_key: str | None
     llm_provider: str
     llm_model: str | None
+    google_sheets_credentials_json: str | None = None
+    google_sheets_credentials_file: str | None = None
+    google_sheets_spreadsheet_id: str | None = None
+    google_sheets_worksheet_name: str = "Outreach"
 
 
 def _repo_root() -> Path:
@@ -70,6 +74,7 @@ def load_config(env_file: str | Path | None = None) -> AppConfig:
 
     dry_run = _parse_bool(os.getenv("DRY_RUN"), default=True)
     send_mode = (os.getenv("SEND_MODE") or "draft").strip().lower()
+    llm_provider = (os.getenv("LLM_PROVIDER") or _infer_llm_provider()).strip().lower()
     if send_mode not in ("draft", "send"):
         raise ConfigError(
             f"SEND_MODE must be 'draft' or 'send', got {send_mode!r}"
@@ -91,8 +96,20 @@ def load_config(env_file: str | Path | None = None) -> AppConfig:
             os.getenv("LOG_PATH"), _repo_root() / "logs" / "outreach_log.csv"
         ),
         groq_api_key=_optional_str(os.getenv("GROQ_API_KEY")),
-        llm_provider=(os.getenv("LLM_PROVIDER") or "groq").strip().lower(),
+        llm_provider=llm_provider,
         llm_model=_optional_str(os.getenv("LLM_MODEL")),
+        google_sheets_credentials_json=_optional_str(
+            os.getenv("GOOGLE_SHEETS_CREDENTIALS_JSON")
+        ),
+        google_sheets_credentials_file=_optional_str(
+            os.getenv("GOOGLE_SHEETS_CREDENTIALS_FILE")
+        ),
+        google_sheets_spreadsheet_id=_optional_str(
+            os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID")
+        ),
+        google_sheets_worksheet_name=(
+            os.getenv("GOOGLE_SHEETS_WORKSHEET_NAME") or "Outreach"
+        ).strip(),
     )
 
     if config.max_outreach_per_run < 0:
@@ -112,6 +129,12 @@ def load_config(env_file: str | Path | None = None) -> AppConfig:
             )
 
     return config
+
+
+def _infer_llm_provider() -> str:
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        return "gemini"
+    return "groq"
 
 
 def _optional_str(value: str | None) -> str | None:

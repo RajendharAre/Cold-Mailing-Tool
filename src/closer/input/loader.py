@@ -85,8 +85,12 @@ def _to_contact(record: Any, index: int) -> Contact | None:
 
     recipient_email = _optional_str(record.get("recipient_email"))
     assert recipient_email is not None
-    if not _is_valid_email(recipient_email):
-        _warn(index, f"invalid recipient_email {recipient_email!r}; skipping")
+    recipient_email = _normalize_email(recipient_email)
+    if recipient_email is None:
+        _warn(
+            index,
+            f"invalid recipient_email {record.get('recipient_email')!r}; skipping",
+        )
         return None
 
     return Contact(
@@ -118,9 +122,13 @@ def _optional_str(value: Any) -> str | None:
     return text if text else None
 
 
-def _is_valid_email(email: str) -> bool:
+def _normalize_email(email: str) -> str | None:
+    """Return the bare address from an email or display-name form, or None if invalid."""
     _name, parsed_email = parseaddr(email)
-    return bool(parsed_email and _EMAIL_RE.match(parsed_email))
+    parsed_email = parsed_email.strip()
+    if not parsed_email or not _EMAIL_RE.match(parsed_email):
+        return None
+    return parsed_email
 
 
 def _warn(index: int, message: str) -> None:
