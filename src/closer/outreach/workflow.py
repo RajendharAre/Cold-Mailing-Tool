@@ -58,7 +58,10 @@ def record_log(
 
 def _sync_tracking(contact: Contact, draft: EmailDraft, status: str, config: AppConfig) -> None:
     result = append_outreach_row(contact, draft, status, config)
-    print(f"[tracking] {result['message']}")
+    if result.get("enabled"):
+        print(f"[tracking] {result['message']}")
+    else:
+        print(f"[tracking] {result['message']}")
 
 
 def handle_contact_action(

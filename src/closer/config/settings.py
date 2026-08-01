@@ -134,6 +134,8 @@ def load_config(env_file: str | Path | None = None) -> AppConfig:
 def _infer_llm_provider() -> str:
     if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
         return "gemini"
+    if os.getenv("GROQ_API_KEY"):
+        return "groq"
     return "groq"
 
 
