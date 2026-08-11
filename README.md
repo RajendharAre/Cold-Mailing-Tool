@@ -201,6 +201,49 @@ For hosted deployments, you would typically add:
 - a deployment platform such as Streamlit Community Cloud or Render,
 - and a database for longer-term outreach history.
 
+### Deploying to Streamlit Community Cloud
+
+Streamlit Cloud has no `.env` file, so secrets live in a local
+`.streamlit/secrets.toml` (gitignored) and are pasted into the Cloud console.
+See Streamlit's [secrets management](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
+docs for the canonical workflow.
+
+1. Create `.streamlit/secrets.toml` with the same keys as your `.env`:
+
+   ```toml
+   GROQ_API_KEY = "gsk_..."            # or GEMINI_API_KEY + GOOGLE_API_KEY
+   LLM_PROVIDER = "groq"
+   SENDER_NAME = "Your Name"
+   SMTP_USER = "you@gmail.com"
+   SMTP_PASSWORD = "app-password"
+   SEND_MODE = "draft"                 # "send" to deliver real emails
+   DRY_RUN = false                     # boolean works fine here
+   GOOGLE_SHEETS_SPREADSHEET_ID = "1..."
+   GOOGLE_SHEETS_WORKSHEET_NAME = "Outreach"
+   GOOGLE_SHEETS_CREDENTIALS_JSON = """{
+     "type": "service_account",
+     ...
+   }"""
+   ```
+
+2. Paste the file's contents into the Cloud secrets field: while deploying
+   use the "**Advanced settings**" dialog → "Secrets"; for an app that is
+   already deployed, use workspace → app overflow menu → "**Settings**" →
+   "**Secrets**" tab → paste → "**Save**".
+
+Notes for the cloud deployment:
+
+- Use `GOOGLE_SHEETS_CREDENTIALS_JSON` (inline JSON of the service-account
+  file) instead of `GOOGLE_SHEETS_CREDENTIALS_FILE`, because the local
+  `credentials/` folder is gitignored and does not exist on the Cloud.
+- `gspread` is included in `requirements.txt`, so the Cloud runner installs it
+  automatically.
+- The config reads environment variables first and falls back to
+  `st.secrets`, so the same app works locally (`.env`) and on the Cloud
+  (dashboard secrets).
+- Always keep `SEND_MODE = "draft"` and `DRY_RUN = true` until you have
+  confirmed drafts look correct, then switch to `"send"`.
+
 ## Future enhancements
 
 Possible next steps include:

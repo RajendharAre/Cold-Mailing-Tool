@@ -73,6 +73,16 @@ def _render_sidebar() -> None:
     st.sidebar.markdown("### Settings")
     st.sidebar.write(f"**DRY_RUN:** `{config.dry_run}`")
     st.sidebar.write(f"**Send mode:** `{config.send_mode}`")
+    st.sidebar.write(f"**LLM provider:** `{config.llm_provider}`")
+    st.sidebar.write(f"**Groq key:** `{'set' if config.groq_api_key else 'missing'}`")
+    sheets_enabled = bool(
+        config.google_sheets_spreadsheet_id
+        and (
+            config.google_sheets_credentials_json
+            or config.google_sheets_credentials_file
+        )
+    )
+    st.sidebar.write(f"**Sheets sync:** `{'enabled' if sheets_enabled else 'off'}`")
     st.sidebar.write(f"**Max per run:** `{config.max_outreach_per_run}`")
     st.sidebar.write(f"**Input:** `{config.input_path}`")
     st.sidebar.write(f"**Log:** `{config.log_path}`")
