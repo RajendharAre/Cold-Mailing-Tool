@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from closer.config import AppConfig
 from closer.domain import Contact, EmailDraft
+
+_IST = ZoneInfo("Asia/Kolkata")
+
+
+def _ist_timestamp() -> str:
+    """Current time in Indian Standard Time as DD/MM/YYYY, HH:MM:SS (IST)."""
+    return datetime.now(_IST).strftime("%d/%m/%Y, %H:%M:%S (IST)")
 
 
 def append_outreach_row(
@@ -23,7 +31,7 @@ def append_outreach_row(
         return {"enabled": False, "message": "Google Sheets not configured."}
 
     payload = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": _ist_timestamp(),
         "recipient_email": contact.recipient_email,
         "recipient_name": contact.recipient_name or "",
         "company": contact.company,
@@ -80,6 +88,7 @@ def _append_with_gspread(payload: dict[str, Any], config: AppConfig) -> dict[str
 
         sheet = client.open_by_key(config.google_sheets_spreadsheet_id)
         worksheet = sheet.worksheet(config.google_sheets_worksheet_name)
+        _ensure_headers(worksheet)
         worksheet.append_row(
             [
                 payload["timestamp"],
@@ -104,6 +113,25 @@ def _append_with_gspread(payload: dict[str, Any], config: AppConfig) -> dict[str
 _STATUS_COLUMN = 7
 _EMAIL_COLUMN = 2
 _LINK_COLUMN = 6
+
+_HEADERS = [
+    "timestamp",
+    "recipient_email",
+    "recipient_name",
+    "company",
+    "role",
+    "job_link",
+    "status",
+    "subject",
+    "word_count",
+]
+
+
+def _ensure_headers(worksheet: Any) -> None:
+    """Write the header row once when the worksheet is empty."""
+    values = worksheet.get_all_values()
+    if not values or (len(values) == 1 and not values[0]):
+        worksheet.append_row(_HEADERS)
 
 
 def update_outreach_status(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 import sys
 
@@ -90,6 +91,12 @@ def test_append_outreach_row_uses_configured_sheet_settings(
     assert captured["payload"]["company"] == "Acme Labs"
     assert captured["payload"]["role"] == "Backend Intern"
     assert captured["payload"]["status"] == "sent"
+    assert captured["payload"]["recipient_name"] == "Jamie"
+    assert captured["payload"]["job_link"] == "https://jobs.example/acme"
+    assert re.fullmatch(
+        r"\d{2}/\d{2}/\d{4}, \d{2}:\d{2}:\d{2} \(IST\)",
+        captured["payload"]["timestamp"],
+    )
 
 
 def test_update_outreach_status_is_disabled_without_sheet_config(config: AppConfig) -> None:

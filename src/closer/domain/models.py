@@ -33,6 +33,8 @@ class Contact:
     resume_link: str | None = None
     job_description: str | None = None
     resume_context: str | None = None
+    resume_filename: str | None = None
+    resume_file_bytes: bytes | None = None
 
 
 @dataclass

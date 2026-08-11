@@ -2,15 +2,31 @@
 
 from __future__ import annotations
 
+import mimetypes
 import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from pathlib import Path
 from typing import Literal
 
 from closer.config import AppConfig
 from closer.domain import Contact, DeliveryResult, EmailDraft
 
 DeliveryMode = Literal["draft", "send"]
+
+_RESUME_FILENAME = "resume_background.md"
+
+
+def _default_resume_path() -> Path | None:
+    """Path to the default resume markdown file, when present."""
+    repo_root = Path(__file__).resolve().parents[3]
+    candidates = [repo_root / _RESUME_FILENAME, repo_root / "Resume_Background.md"]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
 
 
 def deliver_email(
@@ -31,9 +47,10 @@ def _deliver_dry_run(
     mode: DeliveryMode,
 ) -> DeliveryResult:
     verb = "send" if mode == "send" else "create draft for"
+    attachment = contact.resume_filename or _RESUME_FILENAME
     print(
         f"[dry-run] Simulated {verb} {contact.recipient_email} "
-        f"— subject: {draft.subject!r}"
+        f"— subject: {draft.subject!r} — attachment: {attachment}"
     )
     status = "sent" if mode == "send" else "drafted"
     return DeliveryResult(
@@ -78,6 +95,7 @@ def _deliver_smtp(
             to_email=contact.recipient_email,
             from_email=config.smtp_user,
             sender_name=config.sender_name,
+            contact=contact,
         )
         _send_via_smtp(message, config, contact.recipient_email)
         print(f"Email sent to {contact.recipient_email}. Check your Gmail Sent folder.")
@@ -103,15 +121,46 @@ def _build_message(
     to_email: str,
     from_email: str,
     sender_name: str | None,
-) -> MIMEText:
-    message = MIMEText(body, "plain", "utf-8")
+    contact: Contact,
+) -> MIMEMultipart:
+    message = MIMEMultipart()
     message["Subject"] = subject
     message["To"] = to_email
     if sender_name:
         message["From"] = formataddr((sender_name, from_email))
     else:
         message["From"] = from_email
+    message.attach(MIMEText(body, "plain", "utf-8"))
+    _attach_resume(message, contact)
     return message
+
+
+def _attach_resume(message: MIMEMultipart, contact: Contact) -> None:
+    """Attach the uploaded resume, falling back to the default resume file."""
+    filename, data = None, None
+    if contact.resume_filename and contact.resume_file_bytes:
+        filename = contact.resume_filename
+        data = contact.resume_file_bytes
+    else:
+        default_path = _default_resume_path()
+        if default_path is not None:
+            filename = default_path.name
+            data = default_path.read_bytes()
+
+    if not filename or not data:
+        return
+
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type == "application/pdf":
+        subtype = "pdf"
+    elif mime_type and mime_type.startswith("text/"):
+        subtype = mime_type.split("/", 1)[1]
+    else:
+        subtype = "plain"
+
+    attachment = MIMEApplication(data, _subtype=subtype)
+    attachment.add_header("Content-Disposition", "attachment", filename=filename)
+    message.attach(attachment)
 
 
 def _send_via_smtp(message: MIMEText, config: AppConfig, to_email: str) -> None:

@@ -144,9 +144,11 @@ Every action (sent / drafted / skipped / failed) is appended to a Google Sheet w
 
 Setup:
 
-1. Create a Google Cloud service account and download its JSON key file.
-2. Share your target spreadsheet with the service account email (Viewer/Editor).
-3. Configure `.env`:
+1. Create a spreadsheet in Google Sheets and add a tab named `Outreach`. Copy the Spreadsheet ID from the URL (the part between `/d/` and `/edit`).
+2. Enable the Google Sheets API at <https://console.cloud.google.com> (requires a free Google account): create a project, then go to "APIs & Services" → "Enable APIs and services" → search for "Google Sheets API" → enable.
+3. Create a service account and download its JSON key file: "IAM & Admin" → "Service Accounts" → "Create service account" → select it → "Keys" → "Add key" → "JSON" (this downloads the credentials file).
+4. Open the downloaded JSON and copy the `client_email` value. In your spreadsheet, click "Share" and add that email with **Editor** access.
+5. Configure `.env`:
 
 ```env
 GOOGLE_SHEETS_CREDENTIALS_FILE=path/to/service-account.json

@@ -143,6 +143,8 @@ def _seed_form_from_contact(contact: Contact) -> None:
     st.session_state.input_company_inferred = False
     st.session_state.input_role_inferred = False
     st.session_state.input_resume_text = None
+    st.session_state.input_resume_bytes = None
+    st.session_state.input_resume_filename = None
     if "input_resume_upload" in st.session_state:
         del st.session_state["input_resume_upload"]
 
@@ -242,6 +244,8 @@ def _render_input_form(contact: Contact, config) -> Contact:
         key="input_resume_upload",
     )
     if uploaded is not None:
+        st.session_state["input_resume_bytes"] = uploaded.getvalue()
+        st.session_state["input_resume_filename"] = uploaded.name
         try:
             resume_text = extract_resume_text(uploaded.name, uploaded.getvalue())
         except RuntimeError as exc:
@@ -258,6 +262,8 @@ def _render_input_form(contact: Contact, config) -> Contact:
 
     if st.button("Use default resume (resume_background.md)"):
         st.session_state["input_resume_text"] = None
+        st.session_state["input_resume_bytes"] = None
+        st.session_state["input_resume_filename"] = None
         if "input_resume_upload" in st.session_state:
             del st.session_state["input_resume_upload"]
         st.rerun()
@@ -284,10 +290,12 @@ def _render_input_form(contact: Contact, config) -> Contact:
         resume_link=contact.resume_link,
         job_description=job_description.strip() or None,
         resume_context=resume_summary or None,
+        resume_filename=st.session_state.get("input_resume_filename"),
+        resume_file_bytes=st.session_state.get("input_resume_bytes"),
     )
 
 
-def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> EmailDraft:
+def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> tuple[EmailDraft, str, str]:
     st.subheader("Preview")
     col1, col2 = st.columns(2)
     col1.metric("Company", contact.company)
@@ -297,10 +305,14 @@ def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> EmailDra
     subject_key = f"editable_subject_{index}"
     body_key = f"editable_body_{index}"
     recipient_key = f"editable_recipient_name_{index}"
+    job_link_key = f"editable_job_link_{index}"
 
     subject_value = st.text_input("Subject", value=draft.subject, key=subject_key)
     recipient_name_value = st.text_input(
         "Recipient name", value=contact.recipient_name or "there", key=recipient_key
+    )
+    job_link_value = st.text_input(
+        "Job link", value=contact.job_url or "", key=job_link_key
     )
     body_value = st.text_area("Body", value=draft.body, height=320, key=body_key)
 
@@ -309,7 +321,7 @@ def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> EmailDra
         body=body_value,
         word_count=count_words(body_value),
     )
-    return edited_draft
+    return edited_draft, recipient_name_value, job_link_value
 
 
 def _render_reply_tracking(config) -> None:
@@ -375,8 +387,11 @@ def main() -> None:
         st.info("Click **Generate email** to create a draft for this contact.")
         return
 
-    draft = _render_preview(contact, draft, index)
+    draft, preview_name, preview_link = _render_preview(contact, draft, index)
     st.session_state.drafts[index] = draft
+    if preview_name and preview_name != "there":
+        contact.recipient_name = preview_name
+    contact.job_url = preview_link.strip() or None
 
     if index in st.session_state.outcomes:
         st.info(f"Last action: {st.session_state.outcomes[index]}")
