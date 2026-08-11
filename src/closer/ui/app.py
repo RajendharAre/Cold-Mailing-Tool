@@ -295,36 +295,32 @@ def _render_input_form(contact: Contact, config) -> Contact:
     )
 
 
-def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> tuple[EmailDraft, str, str]:
+def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> EmailDraft:
     st.subheader("Preview")
     col1, col2 = st.columns(2)
     col1.metric("Company", contact.company)
     col2.metric("Role", contact.role)
     st.write(f"**To:** {contact.recipient_email}")
+    st.write(
+        f"**Recipient name:** {contact.recipient_name or '(not set)'}  •  "
+        f"**Job link:** {contact.job_url or '(not set)'}"
+    )
 
     subject_key = f"editable_subject_{index}"
     body_key = f"editable_body_{index}"
-    recipient_key = f"editable_recipient_name_{index}"
-    job_link_key = f"editable_job_link_{index}"
 
     subject_value = st.text_input("Subject", value=draft.subject, key=subject_key)
-    recipient_name_value = st.text_input(
-        "Recipient name", value=contact.recipient_name or "there", key=recipient_key
-    )
-    job_link_value = st.text_input(
-        "Job link", value=contact.job_url or "", key=job_link_key
-    )
     body_value = st.text_area("Body", value=draft.body, height=320, key=body_key)
 
-    if not recipient_name_value or recipient_name_value == "there":
+    if not contact.recipient_name:
         st.warning(
             "Recipient name is empty — it will be blank in the Google Sheets "
-            "name column. Type it in the field above if you have it."
+            "name column. Type it in the form above if you have it."
         )
-    if not job_link_value.strip():
+    if not contact.job_url:
         st.warning(
             "Job link is empty — it will be blank in the Google Sheets "
-            "job_link column. Type the job URL above if you have it."
+            "job_link column. Type the job URL in the form above if you have it."
         )
 
     edited_draft = EmailDraft(
@@ -332,7 +328,7 @@ def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> tuple[Em
         body=body_value,
         word_count=count_words(body_value),
     )
-    return edited_draft, recipient_name_value, job_link_value
+    return edited_draft
 
 
 def _render_reply_tracking(config) -> None:
@@ -398,11 +394,8 @@ def main() -> None:
         st.info("Click **Generate email** to create a draft for this contact.")
         return
 
-    draft, preview_name, preview_link = _render_preview(contact, draft, index)
+    draft = _render_preview(contact, draft, index)
     st.session_state.drafts[index] = draft
-    if preview_name and preview_name != "there":
-        contact.recipient_name = preview_name
-    contact.job_url = preview_link.strip() or None
 
     if index in st.session_state.outcomes:
         st.info(f"Last action: {st.session_state.outcomes[index]}")
