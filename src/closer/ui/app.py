@@ -316,6 +316,17 @@ def _render_preview(contact: Contact, draft: EmailDraft, index: int) -> tuple[Em
     )
     body_value = st.text_area("Body", value=draft.body, height=320, key=body_key)
 
+    if not recipient_name_value or recipient_name_value == "there":
+        st.warning(
+            "Recipient name is empty — it will be blank in the Google Sheets "
+            "name column. Type it in the field above if you have it."
+        )
+    if not job_link_value.strip():
+        st.warning(
+            "Job link is empty — it will be blank in the Google Sheets "
+            "job_link column. Type the job URL above if you have it."
+        )
+
     edited_draft = EmailDraft(
         subject=subject_value,
         body=body_value,
